@@ -77,13 +77,14 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
+    console.log("MongoDB connected");
   } catch (error) {
-    console.error(error.message);
-    process.exit(1);
+    console.error("MongoDB connection error:", error.message);
   }
 };
+
+startServer();
+
+export default app;
 
 startServer();
