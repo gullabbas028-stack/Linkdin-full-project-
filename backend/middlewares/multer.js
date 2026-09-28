@@ -1,8 +1,12 @@
 import multer from "multer";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
-const uploadDir = path.resolve("public");
+// Vercel's deployed application directory is read-only. Files uploaded through
+// Multer only exist long enough to be sent to Cloudinary, so use the writable
+// system temporary directory instead.
+const uploadDir = path.join(os.tmpdir(), "linkdin-uploads");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
