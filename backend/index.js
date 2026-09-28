@@ -72,12 +72,18 @@ app.use((err, req, res, next) => {
 });
 
 // ================= START SERVER =================
-// Do not accept requests until MongoDB is ready. Starting Express first used to
-// hide a missing/invalid MONGO_URI and caused every database route to fail later.
+// Vercel invokes the exported Express app itself. Locally, wait for MongoDB
+// before opening a listener so startup failures are reported clearly.
 const startServer = async () => {
   try {
     await connectDB();
     console.log("MongoDB connected");
+
+    if (!process.env.VERCEL) {
+      app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+      });
+    }
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
   }
@@ -86,5 +92,3 @@ const startServer = async () => {
 startServer();
 
 export default app;
-
-startServer();
