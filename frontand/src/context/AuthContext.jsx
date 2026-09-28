@@ -4,10 +4,12 @@ import { createContext } from "react";
 export const authContext = createContext();
 
 function AuthContext({ children }) {
-  // In development this falls back to the local backend. In
-  // production, set VITE_API_URL in the frontend's environment
-  // (e.g. on Vercel) to your deployed backend URL.
-  const serverUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  // VITE_API_URL can override this for a different environment. The deployed
+  // backend is the default so builds without an injected environment variable
+  // still use the production API.
+  const serverUrl =
+    import.meta.env.VITE_API_URL ||
+    "https://linkdin-full-project-kpsc.vercel.app";
 
   let value = {
     serverUrl,
