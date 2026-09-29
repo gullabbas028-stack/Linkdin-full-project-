@@ -9,7 +9,7 @@ function AuthContext({ children }) {
   // still use the production API.
   const serverUrl =
     import.meta.env.VITE_API_URL ||
-    "https://linkdin-full-project.vercel.app/";
+    "https://linkdin-full-project-kpsc.vercel.app/";
 
   let value = {
     serverUrl,
