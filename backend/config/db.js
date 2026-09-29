@@ -12,7 +12,9 @@ const connectDB = async () => {
   }
 
   if (!/^mongodb(?:\+srv)?:\/\//i.test(mongoUri)) {
-    const error = new Error("MONGO_URI must use a MongoDB connection string");
+    const error = new Error(
+      "MONGO_URI must use a MongoDB connection string"
+    );
     error.code = "MONGO_URI_INVALID";
     throw error;
   }
@@ -38,12 +40,14 @@ const connectDB = async () => {
     })
     .catch((cause) => {
       const error = new Error("MongoDB connection failed", { cause });
+
       error.code =
         cause.name === "MongoParseError"
           ? "MONGO_URI_INVALID"
           : cause.name === "MongoServerSelectionError"
             ? "MONGO_SERVER_SELECTION_FAILED"
             : "MONGO_CONNECTION_FAILED";
+
       throw error;
     })
     .finally(() => {
@@ -54,7 +58,6 @@ const connectDB = async () => {
 };
 
 export default connectDB;
-
 
 
 
