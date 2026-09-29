@@ -46,9 +46,7 @@ const UserContext = ({ children }) => {
   };
 
   useEffect(() => {
-    if (serverUrl) {
-      getCurrentUser();
-    }
+    getCurrentUser();
   }, [serverUrl]);
 
   const value = {

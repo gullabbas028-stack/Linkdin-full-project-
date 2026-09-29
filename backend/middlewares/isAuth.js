@@ -1,6 +1,12 @@
 import jwt from "jsonwebtoken";
 
 const isAuth = async (req, res, next) => {
+  if (!process.env.JWT_SECRET) {
+    return res.status(503).json({
+      message: "Authentication is not configured",
+    });
+  }
+
   try {
     const token = req.cookies.token;
 
@@ -15,14 +21,10 @@ const isAuth = async (req, res, next) => {
       process.env.JWT_SECRET
     );
 
-    console.log("Decoded token:", decoded);
-
     req.user = decoded;
 
     next();
   } catch (error) {
-    console.error("Auth middleware error:", error);
-
     return res.status(401).json({
       message: "Invalid or expired token",
     });
