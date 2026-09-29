@@ -14,30 +14,86 @@ import messageRouter from "./routes/message.routes.js";
 const app = express();
 
 const PORT = process.env.PORT || 8000;
+const isProduction = process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+
+const normalizeOrigin = (origin) => {
+  try {
+    return new URL(origin).origin.toLowerCase();
+  } catch {
+    return null;
+  }
+};
+
+const safeMongoErrorDetails = (error) => {
+  const cause = error.cause || error;
+  const serverErrors = cause.reason?.servers;
+  const nestedCause =
+    serverErrors && typeof serverErrors.values === "function"
+      ? Array.from(serverErrors.values())
+          .map((server) => server.error)
+          .find(Boolean)
+      : null;
+  const driverError = nestedCause || cause;
+  const driverCode = driverError.code;
+
+  return {
+    code: error.code || "MONGO_CONNECTION_FAILED",
+    cause: cause.name || "Error",
+    driverCause: nestedCause?.name,
+    driverCode:
+      typeof driverCode === "number" ||
+      (typeof driverCode === "string" && /^[A-Z0-9_]+$/i.test(driverCode))
+        ? driverCode
+        : undefined,
+    driverCodeName: /^[A-Z0-9_]+$/i.test(driverError.codeName || "")
+      ? driverError.codeName
+      : undefined,
+  };
+};
 
 // ================= MIDDLEWARE =================
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const allowedOrigins = [
+const allowedOrigins = new Set([
   process.env.FRONTEND_URL,
-  ...(process.env.NODE_ENV !== "production"
+  ...(!isProduction
     ? ["http://localhost:5173", "http://127.0.0.1:5173"]
     : []),
-].filter(Boolean);
+]
+  .map((origin) => (origin ? normalizeOrigin(origin) : null))
+  .filter(Boolean));
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+const corsOptions = (req, callback) => {
+  const origin = req.get("origin");
+  const normalizedOrigin = origin ? normalizeOrigin(origin) : null;
+  const requestHost = req.get("host")?.toLowerCase();
+  const sameOrigin = Boolean(
+    normalizedOrigin &&
+      requestHost &&
+      normalizedOrigin ===
+        normalizeOrigin(`${isProduction ? "https" : req.protocol}://${requestHost}`)
+  );
+  const secureConfiguredOrigin =
+    !isProduction || normalizedOrigin?.startsWith("https://");
 
-    return callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  if (
+    origin &&
+    !sameOrigin &&
+    !(allowedOrigins.has(normalizedOrigin) && secureConfiguredOrigin)
+  ) {
+    const error = new Error("CORS origin rejected");
+    error.code = "CORS_ORIGIN_REJECTED";
+    return callback(error);
+  }
+
+  return callback(null, {
+    origin: normalizedOrigin || false,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  });
 };
 
 app.use(cors(corsOptions));
@@ -50,7 +106,7 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (error) {
-    console.error("MongoDB unavailable:", error.name, error.code || "");
+    console.error("MongoDB unavailable:", JSON.stringify(safeMongoErrorDetails(error)));
     return res.status(503).json({ message: "Database is unavailable" });
   }
 });
@@ -78,11 +134,20 @@ app.use((req, res) => {
 // and any synchronous error thrown in a route that wasn't caught
 // locally, so the client always gets JSON instead of a crash/blank page.
 app.use((err, req, res, next) => {
-  console.error("Unhandled request error:", err.name, err.code || "");
+  if (err.code === "CORS_ORIGIN_REJECTED") {
+    let originHost = "invalid";
+    try {
+      originHost = new URL(req.get("origin")).host;
+    } catch {}
 
-  if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({ message: "Not allowed by CORS" });
+    console.warn(
+      "CORS origin rejected:",
+      JSON.stringify({ originHost, requestHost: req.get("host") || "unknown" })
+    );
+    return res.status(403).json({ message: "Origin not allowed" });
   }
+
+  console.error("Unhandled request error:", err.code || err.name);
 
   if (err.name === "MulterError") {
     return res.status(400).json({ message: err.message });
@@ -111,7 +176,7 @@ const startServer = async () => {
       });
     }
   } catch (error) {
-    console.error("MongoDB connection failed:", error.name, error.code || "");
+    console.error("MongoDB connection failed:", JSON.stringify(safeMongoErrorDetails(error)));
     process.exitCode = 1;
   }
 };

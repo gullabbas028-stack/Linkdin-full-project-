@@ -77,6 +77,19 @@ test(
         "true"
       );
 
+      const sameOriginCors = await send("/api/auth/signup", {
+        method: "OPTIONS",
+        headers: {
+          Origin: `https://${new URL(baseUrl).host}`,
+          "Access-Control-Request-Method": "POST",
+        },
+      });
+      assert.equal(sameOriginCors.response.status, 204);
+      assert.equal(
+        sameOriginCors.response.headers.get("access-control-allow-origin"),
+        `https://${new URL(baseUrl).host}`
+      );
+
       const deniedCors = await send("/api/auth/signup", {
         method: "OPTIONS",
         headers: {
@@ -132,6 +145,12 @@ test(
         body: signupBody,
       });
       assert.equal(missingMongoUri.response.status, 503);
+      process.env.MONGO_URI = "invalid-mongodb-uri";
+      const invalidMongoUri = await send("/api/auth/signup", {
+        method: "POST",
+        body: signupBody,
+      });
+      assert.equal(invalidMongoUri.response.status, 503);
       process.env.MONGO_URI = configuredMongoUri;
 
       const signup = await send("/api/auth/signup", {
