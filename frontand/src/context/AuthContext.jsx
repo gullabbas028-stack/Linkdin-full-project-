@@ -4,12 +4,8 @@ import { createContext } from "react";
 export const authContext = createContext();
 
 function AuthContext({ children }) {
-  // VITE_API_URL can override this for a different environment. The deployed
-  // backend is the default so builds without an injected environment variable
-  // still use the production API.
-  const serverUrl =
-    import.meta.env.VITE_API_URL ||
-    "https://linkdin-full-project-kpsc.vercel.app/";
+  // Use same-origin API routes by default; VITE_API_URL can override them.
+  const serverUrl = import.meta.env.VITE_API_URL || "";
 
   let value = {
     serverUrl,
