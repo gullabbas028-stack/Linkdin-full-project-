@@ -6,8 +6,8 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const cookieOptions = {
   httpOnly: true,
   maxAge: 7 * 24 * 60 * 60 * 1000,
-  sameSite: "strict",
-  secure: process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL),
+  sameSite: process.env.VERCEL ? "none" : "lax",
+  secure: Boolean(process.env.VERCEL),
   path: "/",
 };
 
