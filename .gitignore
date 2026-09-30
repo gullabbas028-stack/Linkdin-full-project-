@@ -2,8 +2,6 @@
 node_modules/
 
 # Environment and secret configuration
-.env
-.env.*
 !.env.example
 
 # Build output and logs
@@ -15,6 +13,9 @@ yarn-debug.log*
 pnpm-debug.log*
 
 # Local editor and OS files
-.vscode/
 .idea/
 .DS_Store
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+config.bat
